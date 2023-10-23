@@ -1,6 +1,12 @@
 package com.example.assignment3_277.ui.theme
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
+import com.example.assignment3_277.data.Prompt
+import com.example.assignment3_277.data.PromptRepository
+import com.example.assignment3_277.data.Response
+import com.example.assignment3_277.data.ResponseRepository
 import com.example.assignment3_277.data.remote.OpenAIRepositoryImpl
 import com.example.assignment3_277.models.ConversationModel
 import com.example.assignment3_277.models.MessageModel
@@ -13,12 +19,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onCompletion
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
 class GPTViewModel @Inject constructor(
     private val openAIRepo: OpenAIRepositoryImpl,
+    private val promptRepo: PromptRepository,
+    private val responseRepo: ResponseRepository
 ) : ViewModel() {
 
     private val _currentConversation: MutableStateFlow<String> =
@@ -44,6 +54,7 @@ class GPTViewModel @Inject constructor(
         return messagesMap[conversationId]!!
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun sendMessage(message: String) {
 
         val newMessageModel = MessageModel(
@@ -59,6 +70,9 @@ class GPTViewModel @Inject constructor(
         currentListMessage.add(0, newMessageModel)
         setMessages(currentListMessage)
 
+//        System.out.println(_currentConversation.value)
+        promptRepo.addPrompt(Prompt(datetime = LocalDateTime.now().toString(), prompt = message))
+
         // Execute API OpenAI
         val flow: Flow<String> = openAIRepo.textCompletionsWithStream(
             TextCompletionsParam(
@@ -72,6 +86,8 @@ class GPTViewModel @Inject constructor(
             answerFromGPT += value
             updateLocalAnswer(answerFromGPT.trim())
         }
+        responseRepo.addResponse(Response(datetime = LocalDateTime.now().toString(), response = answerFromGPT))
+
     }
 
     private fun updateLocalAnswer(answer: String) {
