@@ -1,9 +1,11 @@
 package com.example.assignment3_277
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +74,8 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val gptViewModel: GPTViewModel by viewModels()
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -87,6 +91,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun Ui(gptViewModel: GPTViewModel) {
@@ -94,6 +99,9 @@ fun Ui(gptViewModel: GPTViewModel) {
 
     val conversationId by gptViewModel.currentConversationState.collectAsState()
     val messagesMap by gptViewModel.messagesState.collectAsState()
+    val responseState by gptViewModel.response.collectAsState()
+
+    var response = responseState.isNotEmpty()
 
     var messages: List<MessageModel> =
         if (messagesMap[conversationId] == null) listOf() else messagesMap[conversationId]!!
@@ -215,6 +223,7 @@ fun Ui(gptViewModel: GPTViewModel) {
                 onClick = {
                     clearText = true
                     messages = emptyList()
+                    gptViewModel._response.value = ""
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B6C7B)),
                 contentPadding = PaddingValues(
@@ -243,6 +252,34 @@ fun Ui(gptViewModel: GPTViewModel) {
                 color = Color.White,
                 fontSize = 30.sp
             )
+
+            Button(
+                enabled = response,
+                onClick = {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
+                    clearText = false
+                    scope.launch {
+                        text = TextFieldValue("")
+                        gptViewModel.saveData()
+
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B6C7B)),
+                contentPadding = PaddingValues(
+                    start = 28.dp,
+                    end = 28.dp,
+                    top = 12.dp,
+                    bottom = 12.dp
+                ),
+                shape = RoundedCornerShape(5.dp)
+            ) {
+                Text(
+                    text = "Save/Audit",
+                    fontSize = 30.sp,
+                    color = Color.White
+                )
+            }
         }
 
         Row(

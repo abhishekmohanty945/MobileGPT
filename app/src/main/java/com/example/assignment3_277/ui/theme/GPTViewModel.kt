@@ -2,6 +2,11 @@ package com.example.assignment3_277.ui.theme
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.example.assignment3_277.data.Prompt
 import com.example.assignment3_277.data.PromptRepository
@@ -30,6 +35,11 @@ class GPTViewModel @Inject constructor(
     private val promptRepo: PromptRepository,
     private val responseRepo: ResponseRepository
 ) : ViewModel() {
+
+    private var prompt = ""
+    var _response: MutableStateFlow<String> = MutableStateFlow("")
+    var response: StateFlow<String> = _response.asStateFlow()
+
 
     private val _currentConversation: MutableStateFlow<String> =
         MutableStateFlow(Date().time.toString())
@@ -71,7 +81,8 @@ class GPTViewModel @Inject constructor(
         setMessages(currentListMessage)
 
 //        System.out.println(_currentConversation.value)
-        promptRepo.addPrompt(Prompt(datetime = LocalDateTime.now().toString(), prompt = message))
+//        promptRepo.addPrompt(Prompt(datetime = LocalDateTime.now().toString(), prompt = message))
+        prompt = message
 
         // Execute API OpenAI
         val flow: Flow<String> = openAIRepo.textCompletionsWithStream(
@@ -86,8 +97,8 @@ class GPTViewModel @Inject constructor(
             answerFromGPT += value
             updateLocalAnswer(answerFromGPT.trim())
         }
-        responseRepo.addResponse(Response(datetime = LocalDateTime.now().toString(), response = answerFromGPT))
-
+//        responseRepo.addResponse(Response(datetime = LocalDateTime.now().toString(), response = answerFromGPT))
+        _response.value = answerFromGPT
     }
 
     private fun updateLocalAnswer(answer: String) {
@@ -128,5 +139,16 @@ class GPTViewModel @Inject constructor(
         messagesMap[_currentConversation.value] = messages
 
         _messages.value = messagesMap
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    suspend fun saveData() {
+        promptRepo.addPrompt(Prompt(datetime = LocalDateTime.now().toString(), prompt = prompt))
+        responseRepo.addResponse(
+            Response(
+                datetime = LocalDateTime.now().toString(),
+                response = response.value
+            )
+        )
     }
 }
